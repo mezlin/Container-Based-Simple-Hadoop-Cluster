@@ -1,0 +1,38 @@
+FROM ubuntu:24.04
+
+# Install necessary packages
+RUN apt update && apt install -y openjdk-11-jdk ssh wget curl openssh-server nano iputils-ping
+
+# Install hadoop
+RUN wget https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz && \
+    tar -xvzf hadoop-3.3.6.tar.gz && \
+    mv hadoop-3.3.6 /usr/local/hadoop && \
+    rm hadoop-3.3.6.tar.gz
+
+# Set environment variables
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV HADOOP_HOME=/usr/local/hadoop
+ENV PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
+
+# Set up ssh
+RUN mkdir -p /root/.ssh && \
+    ssh-keygen -t rsa -P '' -f /root/.ssh/id_rsa && \
+    cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
+    chmod 0600 /root/.ssh/authorized_keys
+
+COPY ./master_Noeud /usr/local/hadoop/etc/hadoop/
+
+# Set the correct JAVA_HOME path in hadoop-env.sh
+RUN sed -i 's@^export JAVA_HOME=.*@export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64@' /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+
+# To be able to run hadoop as root
+RUN echo "export HDFS_NAMENODE_USER=root" >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo "export HDFS_DATANODE_USER=root" >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo "export HDFS_SECONDARYNAMENODE_USER=root" >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo "export YARN_RESOURCEMANAGER_USER=root" >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+RUN echo "export YARN_NODEMANAGER_USER=root" >> /usr/local/hadoop/etc/hadoop/hadoop-env.sh
+
+# Keep container running
+CMD [ "/bin/bash", "-c", "while true; do sleep 30; done" ]
+
+
